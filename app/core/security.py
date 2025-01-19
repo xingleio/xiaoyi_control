@@ -3,17 +3,19 @@ import time
 import hmac
 import hashlib
 import requests
-from fastapi import HTTPException, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import HTTPException, Depends, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
 from dotenv import load_dotenv
 from .redis_client import RedisClient
+from jose import JWTError, jwt
 
 load_dotenv()
 
 security = HTTPBearer()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 class SecurityUtils:
     @staticmethod
@@ -107,3 +109,17 @@ async def get_current_user(
         raise
     except Exception as e:
         raise HTTPException(status_code=401, detail="Invalid authentication")
+
+async def get_current_admin(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    验证当前用户是否是管理员
+    """
+    if not current_user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The user doesn't have enough privileges"
+        )
+    return current_user
