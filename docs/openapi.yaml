@@ -1,0 +1,324 @@
+openapi: 3.0.0
+info:
+  title: 小怡课表 API
+  version: 1.0.0
+  description: 小怡课表后端API文档
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: 开发环境
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
+          description: 错误信息描述
+
+paths:
+  /auth/wx-login:
+    post:
+      summary: 微信登录
+      description: 小程序登录，获取token
+      tags:
+        - 用户认证
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  description: 小程序 wx.login() 获取的 code
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: 后续请求需要携带的token
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      nickname:
+                        type: string
+                      avatar_url:
+                        type: string
+                      role:
+                        type: string
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /courses/master:
+    get:
+      summary: 获取标准课程列表
+      description: 获取系统预设的课程列表
+      tags:
+        - 课程管理
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: enabled
+          schema:
+            type: boolean
+          description: 是否启用
+        - in: query
+          name: type
+          schema:
+            type: string
+          description: 课程类型
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        course_id:
+                          type: integer
+                        course_code:
+                          type: string
+                        course_name:
+                          type: string
+                        course_type:
+                          type: string
+
+  /courses/user:
+    get:
+      summary: 获取用户课程列表
+      description: 获取当前用户的所有课程
+      tags:
+        - 课程管理
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        course_user_id:
+                          type: integer
+                        course_name:
+                          type: string
+                        course_alias:
+                          type: string
+                          description: 课程别名
+                        teacher_name:
+                          type: string
+                        classroom:
+                          type: string
+                        course_color:
+                          type: string
+    
+    post:
+      summary: 添加用户课程
+      description: 添加课程到个人课表
+      tags:
+        - 课程管理
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                course_id:
+                  type: integer
+                  description: 标准课程ID
+                course_alias:
+                  type: string
+                  description: 课程别名
+                teacher_name:
+                  type: string
+                  description: 教师姓名
+                classroom:
+                  type: string
+                  description: 教室
+                course_color:
+                  type: string
+                  description: 显示颜色，十六进制颜色码
+              required:
+                - course_id
+
+  /schedule/{day}:
+    get:
+      summary: 获取某天课表
+      description: 获取指定日期的课表
+      tags:
+        - 课表管理
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: day
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 7
+          description: 星期几（1-7，代表周一到周日）
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  day_of_week:
+                    type: integer
+                    description: 1-7，代表周一到周日
+                  courses:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        slot:
+                          type: integer
+                          description: 第几节课，1-9
+                        course:
+                          type: object
+                          properties:
+                            course_user_id:
+                              type: integer
+                            course_name:
+                              type: string
+                            course_alias:
+                              type: string
+                            teacher_name:
+                              type: string
+                            classroom:
+                              type: string
+                            course_color:
+                              type: string
+    
+    put:
+      summary: 设置某天课表
+      description: 设置指定日期的课表
+      tags:
+        - 课表管理
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: day
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 7
+          description: 星期几（1-7，代表周一到周日）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                course_user_id1:
+                  type: integer
+                  description: 第1节课的课程ID
+                course_user_id2:
+                  type: integer
+                  description: 第2节课的课程ID
+                course_user_id3:
+                  type: integer
+                  description: 第3节课的课程ID
+                course_user_id4:
+                  type: integer
+                  description: 第4节课的课程ID
+                course_user_id5:
+                  type: integer
+                  description: 第5节课的课程ID
+                course_user_id6:
+                  type: integer
+                  description: 第6节课的课程ID
+                course_user_id7:
+                  type: integer
+                  description: 第7节课的课程ID
+                course_user_id8:
+                  type: integer
+                  description: 第8节课的课程ID
+                course_user_id9:
+                  type: integer
+                  description: 第9节课的课程ID
+
+  /auth/upload-avatar:
+    post:
+      summary: 上传头像
+      description: 上传用户头像到MinIO存储
+      tags:
+        - 用户认证
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 图片文件(jpg/jpeg/png)
+      responses:
+        '200':
+          description: 上传成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    description: 文件访问URL
+        '400':
+          description: 无效的文件类型
+        '401':
+          description: 未授权
+        '500':
+          description: 上传失败
+
+security:
+  - bearerAuth: [] 
